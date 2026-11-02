@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¿Cuánto vale tu agenda? — Calculadora para médicos</title>
+<meta name="description" content="Calcula cuánto valen los espacios libres de tu agenda con los datos de tu propia clínica.">
+<meta property="og:title" content="¿Cuánto vale el espacio libre de tu agenda?">
+<meta property="og:description" content="Calculadora para médicos: 4 preguntas, solo con los datos de tu clínica.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────
+   AJUSTA AQUÍ LOS COLORES REALES DE LA MARCA
+   (paleta: navy, azul, verde, rosa, lavanda, menta)
+   ───────────────────────────────────────────── */
+:root {
+  --navy:    #15213F;
+  --azul:    #2F5BEA;
+  --verde:   #1F8A5B;
+  --rosa:    #E8789A;
+  --lavanda: #E6E1FA;
+  --menta:   #D3F2E6;
+
+  --bg:      #FFFFFF;
+  --surface: #F6F5FD;
+  --text:    #15213F;
+  --muted:   #5B6480;
+  --line:    #DCD8F0;
+  --slot-full: var(--navy);
+  --slot-free: var(--rosa);
+  --on-dark: #FFFFFF;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:      #0F1730;
+    --surface: #18223F;
+    --text:    #EEF0FA;
+    --muted:   #A7AECB;
+    --line:    #2B3659;
+    --lavanda: #262F55;
+    --menta:   #163A2F;
+    --slot-full: #C9D3F5;
+    --verde:   #5CCB98;
+    color-scheme: dark;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.55;
+}
+h1, h2, .num, .stepper input, .cta-btn {
+  font-family: 'Space Grotesk', 'Hanken Grotesk', system-ui, sans-serif;
+}
+
+/* ── Encabezado con montañas ── */
+.top {
+  background: var(--navy);
+  color: var(--on-dark);
+  position: relative;
+  padding: 2.25rem 1.25rem 5.5rem;
+  overflow: hidden;
+}
+.top-inner { max-width: 680px; margin: 0 auto; position: relative; z-index: 1; }
+.logo { height: 30px; width: auto; display: block; margin-bottom: 2.25rem; }
+.top h1 {
+  font-size: clamp(2.1rem, 7vw, 3.3rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+  margin-bottom: 1rem;
+}
+.top p { color: rgba(255,255,255,0.72); max-width: 46ch; }
+.ridge { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 70px; display: block; }
+
+main { max-width: 680px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+/* ── Preguntas ── */
+.questions { margin-top: -2.5rem; position: relative; z-index: 2; background: var(--bg); border: 1px solid var(--line); border-radius: 18px; padding: 1.5rem 1.25rem; }
+.q { padding: 1rem 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: .5rem 1rem; align-items: center; }
+.q:first-child { padding-top: 0; }
+.q:last-child { border-bottom: 0; padding-bottom: 0; }
+.q label { font-weight: 600; font-size: 1rem; line-height: 1.35; }
+.q small { display: block; color: var(--muted); font-weight: 400; font-size: .88rem; margin-top: .2rem; }
+.stepper { display: flex; align-items: center; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); }
+.stepper:focus-within { border-color: var(--azul); }
+.stepper .pre { padding-left: .75rem; color: var(--muted); font-weight: 600; }
+.stepper input {
+  width: 5.2rem; border: 0; background: transparent; color: var(--text);
+  font-size: 1.3rem; font-weight: 600; padding: .55rem .6rem; text-align: right;
+  -moz-appearance: textfield;
+}
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.stepper input:focus { outline: none; }
+.stepper input::placeholder { color: var(--muted); opacity: .45; }
+.err { grid-column: 1 / -1; color: #C2410C; font-size: .9rem; display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .err { color: #FDBA74; } }
+.err.show { display: block; }
+
+/* ── Agenda visual (el elemento protagonista) ── */
+.agenda { margin-top: 2.5rem; }
+.agenda h2, .block h2 { font-size: 1.45rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; margin-bottom: .35rem; }
+.agenda .lead { color: var(--muted); margin-bottom: 1.1rem; }
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+  gap: 5px; padding: 1rem; background: var(--surface); border-radius: 16px; min-height: 90px;
+}
+.slot { aspect-ratio: 1; border-radius: 5px; background: var(--slot-full); transform: scale(.6); opacity: 0; animation: pop .35s ease forwards; }
+.slot.free { background: transparent; border: 2px solid var(--slot-free); }
+.grid.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: .95rem; text-align: center; }
+@keyframes pop { to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .slot { animation: none; transform: none; opacity: 1; } }
+.legend { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: .75rem; font-size: .9rem; color: var(--muted); }
+.legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: .4rem; vertical-align: -1px; }
+.legend .l-full::before { background: var(--slot-full); }
+.legend .l-free::before { border: 2px solid var(--slot-free); }
+
+/* ── Resultados ── */
+.results { margin-top: 2rem; display: none; }
+.results.show { display: block; }
+.big {
+  border-left: 4px solid var(--rosa); padding: .25rem 0 .25rem 1.1rem; margin-bottom: 2rem;
+}
+.big .num { font-size: clamp(2.4rem, 9vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+.big p { color: var(--muted); max-width: 46ch; }
+.big p strong { color: var(--text); }
+.block { padding: 1.4rem 0; border-top: 1px solid var(--line); }
+.block p { color: var(--muted); }
+.block p strong { color: var(--text); }
+.block .num { font-size: 2rem; font-weight: 700; color: var(--text); line-height: 1.1; margin: .2rem 0 .4rem; }
+.even { background: var(--menta); border-radius: 16px; padding: 1.4rem 1.25rem; margin-top: .5rem; }
+.even .num { color: var(--verde); }
+.even p { color: var(--text); }
+.note { font-size: .85rem; color: var(--muted); margin-top: 1.25rem; }
+
+/* ── Llamado a la acción ── */
+.cta { margin-top: 2.5rem; background: var(--navy); color: var(--on-dark); border-radius: 20px; padding: 2rem 1.4rem; }
+.cta h2 { font-size: 1.6rem; font-weight: 600; line-height: 1.15; margin-bottom: .6rem; letter-spacing: -0.01em; }
+.cta > p { color: rgba(255,255,255,0.75); margin-bottom: 1.4rem; max-width: 46ch; }
+.cta ol { list-style: none; counter-reset: s; margin-bottom: 1.6rem; display: grid; gap: .8rem; }
+.cta li { counter-increment: s; display: grid; grid-template-columns: 2rem 1fr; gap: .6rem; align-items: start; color: rgba(255,255,255,0.88); }
+.cta li::before {
+  content: counter(s); font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+  width: 2rem; height: 2rem; border-radius: 50%; background: var(--azul); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: .95rem;
+}
+.cta-btn {
+  display: inline-block; background: #fff; color: var(--navy); text-decoration: none;
+  font-weight: 700; font-size: 1.05rem; padding: .95rem 1.6rem; border-radius: 999px;
+}
+.cta-btn:hover { background: var(--lavanda); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cta-btn:hover { background: #E6E1FA; } }
+.cta-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.cta-btn.ghost { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.45); }
+.cta-btn.ghost:hover { background: rgba(255,255,255,0.1); }
+.cta small { display: block; margin-top: .9rem; color: rgba(255,255,255,0.55); font-size: .85rem; }
+
+a:focus-visible, input:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
+
+@media (max-width: 460px) {
+  .q { grid-template-columns: 1fr; }
+  .stepper { justify-self: start; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <!-- Sube el logo real al repositorio con el nombre logo.svg (o cambia la ruta aquí) -->
+    <img class="logo" src="logo.svg" alt="Logo de la agencia" onerror="this.style.display='none'">
+    <h1>¿Cuánto vale el espacio libre de tu agenda?</h1>
+    <p>Responde 4 preguntas sobre tu clínica. Calculamos todo solo con tus números, sin promedios ni estimaciones de mercado.</p>
+  </div>
+  <svg class="ridge" viewBox="0 0 1200 70" preserveAspectRatio="none" aria-hidden="true">
+    <polygon fill="var(--bg)" points="0,70 0,48 140,18 260,44 410,6 560,40 700,22 820,46 980,10 1110,38 1200,26 1200,70"/>
+  </svg>
+</header>
+
+<main>
+  <section class="questions" aria-label="Datos de tu clínica">
+    <div class="q">
+      <label for="precio">¿Cuánto cobras por consulta?<small>Precio de una consulta normal</small></label>
+      <div class="stepper"><span class="pre">Q</span><input id="precio" type="number" inputmode="numeric" min="0" placeholder="500"></div>
+    </div>
+    <div class="q">
+      <label for="cap">¿Cuántas citas caben en tu agenda a la semana?<small>Contando todos tus días y horarios de consulta</small></label>
+      <div class="stepper"><input id="cap" type="number" inputmode="numeric" min="0" placeholder="40"></div>
+    </div>
+    <div class="q">
+      <label for="real">¿Cuántas citas tienes en una semana normal?<small>Pacientes nuevos y de seguimiento juntos</small></label>
+      <div class="stepper"><input id="real" type="number" inputmode="numeric" min="0" placeholder="28"></div>
+      <p class="err" id="err-real">Tienes más citas que espacios en tu agenda. Revisa los dos números: la capacidad debe incluir todas tus citas.</p>
+    </div>
+    <div class="q">
+      <label for="vuelve">¿Cuántas veces regresa un paciente nuevo en su primer año?<small>Seguimientos, sin contar la primera consulta</small></label>
+      <div class="stepper"><input id="vuelve" type="number" inputmode="numeric" min="0" max="52" placeholder="2"></div>
+    </div>
+    <div class="q">
+      <label for="meta">¿Cuánto quieres facturar al mes en consultas?<small>Opcional. Si la escribes, te decimos qué tan cerca estás</small></label>
+      <div class="stepper"><span class="pre">Q</span><input id="meta" type="number" inputmode="numeric" min="0" placeholder="30000"></div>
+    </div>
+  </section>
+
+  <section class="agenda" aria-live="polite">
+    <h2>Tu semana</h2>
+    <p class="lead" id="agenda-lead">Cada cuadro es una cita de tu agenda.</p>
+    <div class="grid empty" id="grid">Escribe tus números y aquí verás tu agenda.</div>
+    <div class="legend" id="legend" hidden><span class="l-full">Citas ocupadas</span><span class="l-free">Espacios libres</span></div>
+  </section>
+
+  <section class="results" id="results" aria-live="polite">
+    <div class="big">
+      <div class="num" id="r-mes">Q0</div>
+      <p id="r-mes-txt"></p>
+    </div>
+
+    <div class="block">
+      <h2>Lo que vale un paciente nuevo</h2>
+      <div class="num" id="r-paciente">Q0</div>
+      <p id="r-paciente-txt"></p>
+    </div>
+
+    <div class="block" id="meta-block" hidden>
+      <h2>Tu meta</h2>
+      <div class="num" id="r-meta">0</div>
+      <p id="r-meta-txt"></p>
+    </div>
+
+    <div class="block even">
+      <h2>Cuándo se paga trabajar con nosotros</h2>
+      <div class="num" id="r-even">0 consultas</div>
+      <p id="r-even-txt"></p>
+    </div>
+
+    <p class="note">Calculado con 4 semanas por mes y solo con los datos que escribiste. No incluye productos ni procedimientos.</p>
+  </section>
+
+  <section class="cta">
+    <h2>Agenda tu diagnóstico gratuito</h2>
+    <p>Genial que te tomes un momento para mirar tus números. El siguiente paso es ver qué está pasando con tu presencia digital.</p>
+    <ol>
+      <li>Agendas 15 minutos y nos cuentas de tu clínica.</li>
+      <li>Revisamos tu Google, tu Instagram y tus reseñas.</li>
+      <li>Te enviamos un informe con sugerencias y una propuesta.</li>
+    </ol>
+    <div class="cta-actions">
+      <a class="cta-btn" id="cta-btn" href="#" target="_blank" rel="noopener">Agendar mi diagnóstico</a>
+      <a class="cta-btn ghost" id="wa-btn" href="#" target="_blank" rel="noopener" hidden>Recibir mi resultado por WhatsApp</a>
+    </div>
+    <small>Sin costo y sin compromiso. Solo para médicos.</small>
+  </section>
+</main>
+
+<script>
+/* ─────────────────────────────────────────────
+   CONFIGURACIÓN — cambia aquí, no en las fórmulas
+   ───────────────────────────────────────────── */
+var CONFIG = {
+  moneda: 'Q',
+  inversionMensual: 2900,        // paquete de entrada, por mes
+  semanasPorMes: 4,              // conservador (un mes real tiene ~4.3)
+  agendaLlena: 0.9,              // a partir de 90% de ocupación cambia el mensaje
+  calendly: 'https://calendly.com/medicalmedia360/15min',
+  // Si tu evento de Calendly tiene una primera pregunta personalizada,
+  // los resultados llegan ahí automáticamente (parámetro a1).
+  enviarResultadosACalendly: true,
+  // Número de WhatsApp de la agencia, solo dígitos con código de país (ej. 50212345678).
+  // Si lo dejas vacío, el botón de WhatsApp no aparece.
+  whatsapp: '',
+  // ID del Pixel de Meta (solo números). Si lo dejas vacío, no se carga el pixel.
+  metaPixelId: ''
+};
+
+/* ── Pixel de Meta y eventos ── */
+if (CONFIG.metaPixelId) {
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', CONFIG.metaPixelId);
+  fbq('track', 'PageView');
+}
+function track(evento, custom) {
+  if (!window.fbq) return;
+  if (custom) fbq('trackCustom', evento); else fbq('track', evento);
+}
+var completada = false;
+
+/* Pasa las UTM del anuncio a Calendly para saber de qué campaña vino cada cita */
+var utm = (function () {
+  var q = new URLSearchParams(location.search), out = [];
+  ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function (k) {
+    if (q.get(k)) out.push(k + '=' + encodeURIComponent(q.get(k)));
+  });
+  return out.join('&');
+})();
+
+var $ = function (id) { return document.getElementById(id); };
+function money(n) { return CONFIG.moneda + Math.round(n).toLocaleString('es-GT'); }
+function val(id) { var v = parseFloat($(id).value); return isNaN(v) || v < 0 ? null : v; }
+function plural(n, uno, varios) { return n === 1 ? uno : varios; }
+
+var lastKey = '';
+
+function render() {
+  var precio = val('precio'), cap = val('cap'), real = val('real'), vuelve = val('vuelve');
+  var tooMany = cap !== null && real !== null && real > cap;
+  $('err-real').classList.toggle('show', tooMany);
+
+  // Agenda visual
+  var grid = $('grid');
+  if (cap === null || real === null || cap === 0 || tooMany) {
+    grid.className = 'grid empty';
+    grid.textContent = tooMany ? 'Revisa tus números para ver tu agenda.' : 'Escribe tus números y aquí verás tu agenda.';
+    $('legend').hidden = true;
+    $('agenda-lead').textContent = 'Cada cuadro es una cita de tu agenda.';
+    lastKey = '';
+  } else {
+    var per = Math.max(1, Math.ceil(cap / 120));
+    var total = Math.ceil(cap / per), full = Math.round(real / per);
+    var key = total + '-' + full;
+    if (key !== lastKey) {
+      lastKey = key;
+      grid.className = 'grid';
+      var html = '';
+      for (var i = 0; i < total; i++) {
+        html += '<div class="slot' + (i >= full ? ' free' : '') + '" style="animation-delay:' + Math.min(i * 8, 600) + 'ms"></div>';
+      }
+      grid.innerHTML = html;
+    }
+    $('legend').hidden = false;
+    $('agenda-lead').textContent = per === 1 ? 'Cada cuadro es una cita de tu agenda.' : 'Cada cuadro representa ' + per + ' citas de tu agenda.';
+  }
+
+  // Resultados
+  var ready = precio !== null && precio > 0 && cap !== null && cap > 0 && real !== null && vuelve !== null && !tooMany;
+  $('results').classList.toggle('show', ready);
+  if (!ready) { updateCta(null); return; }
+
+  var libresSem = cap - real;
+  var libresMes = libresSem * CONFIG.semanasPorMes;
+  var valorLibres = libresMes * precio;
+  var ocupacion = real / cap;
+  var valorPaciente = precio * (1 + vuelve);
+  var consultasEquilibrio = Math.ceil(CONFIG.inversionMensual / precio);
+
+  // 1. Espacios libres
+  if (libresSem === 0) {
+    $('r-mes').textContent = 'Agenda llena';
+    $('r-mes-txt').innerHTML = 'Tu agenda está completa. Genial: el reto para ti no es llenar espacios, sino que cada paciente te elija para todo su tratamiento.';
+  } else {
+    $('r-mes').textContent = money(valorLibres) + ' al mes';
+    $('r-mes-txt').innerHTML = 'Es lo que suman tus <strong>' + libresMes + ' ' + plural(libresMes, 'espacio libre', 'espacios libres') + ' al mes</strong> (' + libresSem + ' por semana) con tu consulta de ' + money(precio) + '. Tu agenda está ocupada al <strong>' + Math.round(ocupacion * 100) + '%</strong>.';
+  }
+
+  // 2. Valor de un paciente nuevo
+  $('r-paciente').textContent = money(valorPaciente) + ' en su primer año';
+  $('r-paciente-txt').innerHTML = vuelve === 0
+    ? 'Solo cuenta la primera consulta, porque escribiste que no regresan durante el año.'
+    : 'La primera consulta más ' + vuelve + ' ' + plural(vuelve, 'seguimiento', 'seguimientos') + '. Cada paciente nuevo que llega vale más que una sola cita.';
+
+  // 3. Punto de equilibrio
+  $('r-even').textContent = consultasEquilibrio + ' ' + plural(consultasEquilibrio, 'consulta', 'consultas') + ' al mes';
+  var t = 'Nuestra inversión empieza en <strong>' + money(CONFIG.inversionMensual) + ' al mes</strong>. Con tu precio, se cubre con ' + consultasEquilibrio + ' ' + plural(consultasEquilibrio, 'consulta adicional', 'consultas adicionales') + ' al mes. ';
+  if (libresSem === 0 || ocupacion >= CONFIG.agendaLlena) {
+    t += 'Como tu agenda está casi llena, en tu caso trabajaríamos en el valor de cada paciente más que en atraer volumen.';
+  } else if (consultasEquilibrio <= libresMes) {
+    t += 'Tu agenda tiene espacio para eso: son ' + consultasEquilibrio + ' de tus ' + libresMes + ' espacios libres del mes.';
+  } else {
+    t += 'Eso es más de lo que hoy tienes libre, así que lo revisaríamos contigo en el diagnóstico.';
+  }
+  $('r-even-txt').innerHTML = t;
+
+  // 4. Meta (opcional)
+  var meta = val('meta');
+  var metaBlock = $('meta-block');
+  if (meta !== null && meta > 0) {
+    metaBlock.hidden = false;
+    var actual = real * CONFIG.semanasPorMes * precio;
+    var falta = meta - actual;
+    if (falta <= 0) {
+      $('r-meta').textContent = 'Ya la alcanzas';
+      $('r-meta-txt').innerHTML = 'Con tus citas actuales facturas cerca de <strong>' + money(actual) + ' al mes</strong>. Genial: tu siguiente paso es subir el valor de cada paciente, no la cantidad.';
+    } else {
+      var extra = Math.ceil(falta / precio);
+      $('r-meta').textContent = extra + ' ' + plural(extra, 'consulta más', 'consultas más') + ' al mes';
+      var m = 'Hoy facturas cerca de <strong>' + money(actual) + ' al mes</strong> en consultas. Para llegar a ' + money(meta) + ' te faltan ' + money(falta) + '. ';
+      m += extra <= libresMes
+        ? 'Caben en tu agenda: usarías ' + extra + ' de tus ' + libresMes + ' espacios libres.'
+        : 'Tu agenda no alcanza para eso: tienes ' + libresMes + ' espacios libres al mes. Para llegar a tu meta habría que revisar tu precio o tu capacidad.';
+      $('r-meta-txt').innerHTML = m;
+    }
+  } else {
+    metaBlock.hidden = true;
+  }
+
+  if (!completada) { completada = true; track('CalculadoraCompleta', true); }
+
+  updateCta({ precio: precio, cap: cap, real: real, vuelve: vuelve, libresMes: libresMes, valorLibres: valorLibres, meta: meta });
+}
+
+function updateCta(d) {
+  var url = CONFIG.calendly;
+  if (d && CONFIG.enviarResultadosACalendly) {
+    var resumen = 'Calculadora: consulta ' + money(d.precio) + ', capacidad ' + d.cap + ' citas/semana, ocupadas ' + d.real +
+      ', seguimientos/año ' + d.vuelve + ', espacios libres/mes ' + d.libresMes + ' (' + money(d.valorLibres) + ').';
+    url += (url.indexOf('?') === -1 ? '?' : '&') + 'a1=' + encodeURIComponent(resumen);
+  }
+  if (utm) url += (url.indexOf('?') === -1 ? '?' : '&') + utm;
+  $('cta-btn').href = url;
+
+  var wa = $('wa-btn');
+  if (!CONFIG.whatsapp) { wa.hidden = true; return; }
+  wa.hidden = false;
+  var msg = 'Hola, usé la calculadora de agenda y me gustaría recibir mi diagnóstico.';
+  if (d) {
+    msg = 'Hola, usé la calculadora de agenda. Mis datos: consulta de ' + money(d.precio) + ', ' + d.cap +
+      ' citas por semana de capacidad y ' + d.real + ' ocupadas, ' + d.vuelve + ' seguimientos al año por paciente' +
+      (d.meta ? ', y quiero facturar ' + money(d.meta) + ' al mes' : '') +
+      '. Me salen ' + d.libresMes + ' espacios libres al mes. Me gustaría recibir mi diagnóstico.';
+  }
+  wa.href = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg);
+}
+
+$('cta-btn').addEventListener('click', function () { track('Schedule'); });
+$('wa-btn').addEventListener('click', function () { track('Lead'); });
+['precio', 'cap', 'real', 'vuelve', 'meta'].forEach(function (id) { $(id).addEventListener('input', render); });
+render();
+</script>
+</body>
+</html>
